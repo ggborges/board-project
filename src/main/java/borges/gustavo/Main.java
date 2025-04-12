@@ -1,6 +1,7 @@
 package borges.gustavo;
 
 import borges.gustavo.persistence.migration.MigrationStrategy;
+import borges.gustavo.ui.MainMenu;
 
 import java.sql.SQLException;
 
@@ -11,8 +12,8 @@ public class Main {
     public static void main(String[] args) throws SQLException {
         try(var connection = getConnection()) {
             new MigrationStrategy(connection).executeMigration();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        new MainMenu().execute();
     }
 }
