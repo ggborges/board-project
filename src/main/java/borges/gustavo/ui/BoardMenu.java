@@ -1,6 +1,8 @@
 package borges.gustavo.ui;
 
+import borges.gustavo.persistence.entity.BoardColumnEntity;
 import borges.gustavo.persistence.entity.BoardEntity;
+import borges.gustavo.service.BoardColumnQueryService;
 import borges.gustavo.service.BoardQueryService;
 import lombok.AllArgsConstructor;
 
@@ -83,8 +85,22 @@ public class BoardMenu {
         }
     }
 
-    private void showColumn() {
-
+    private void showColumn() throws SQLException {
+        var columnsIds = entity.getBoardColumns().stream().map(BoardColumnEntity::getId).toList();
+        var selectedColumn = -1L;
+        while (!columnsIds.contains(selectedColumn)) {
+            System.out.printf("Escolha uma coluna do Board %s\n", entity.getName());
+            entity.getBoardColumns().forEach(column -> System.out.printf("%s - %s [%s]\n", column.getId(), column.getName(), column.getKind()));
+            selectedColumn = scanner.nextLong();
+        }
+        try (var connection = getConnection()) {
+            var column = new BoardColumnQueryService(connection).findById(selectedColumn);
+            column.ifPresent(b -> {
+                System.out.printf("Coluna %s tipo %s\n", b.getName(), b.getKind());
+                b.getCards().forEach(card -> System.out.printf("Card [%s] - %s\nDescrição: %s",
+                        card.getId(), card.getTitle(), card.getDescription()));
+            })
+        }
     }
 
     private void showCard() {
