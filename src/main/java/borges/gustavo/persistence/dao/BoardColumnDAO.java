@@ -1,5 +1,6 @@
 package borges.gustavo.persistence.dao;
 
+import borges.gustavo.dto.BoardColumnDTO;
 import borges.gustavo.persistence.entity.BoardColumnEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 import lombok.AllArgsConstructor;
@@ -35,7 +36,7 @@ public class BoardColumnDAO {
 
     public List<BoardColumnEntity> findByBoardId(Long id) throws SQLException {
         List<BoardColumnEntity> entities = new ArrayList<>();
-        var sql = "SELECT id, name, `order` FROM BOARDS_COLUMNS WHERE board_id = ? ORDER BY `order`";
+        var sql = "SELECT id, name, `order`, kind FROM BOARDS_COLUMNS WHERE board_id = ? ORDER BY `order`";
         try(var statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
             statement.executeQuery();
@@ -49,6 +50,36 @@ public class BoardColumnDAO {
                 entities.add(entity);
             }
             return entities;
+        }
+    }
+
+    public List<BoardColumnDTO> findByBoardIdWithDetails(Long id) throws SQLException {
+        List<BoardColumnDTO> dtos = new ArrayList<>();
+        var sql =
+                """
+                SELECT bc.id, 
+                       bc.name, 
+                       bc.kind, 
+                       COUNT(SELECT c.id 
+                            FROM CARDS c 
+                            WHERE c.board_column_id = bc.id) AS cards_amount
+                FROM BOARDS_COLUMNS bc
+                WHERE board_id = ? 
+                ORDER BY `order`
+                """;
+        try(var statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, id);
+            statement.executeQuery();
+            var resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                var dto = new BoardColumnDTO(resultSet.getLong("bc.id"),
+                        resultSet.getString("bc.name"),
+                        findByName(resultSet.getString("bc.kind")),
+                        resultSet.getInt("cards_amount")
+                );
+                dtos.add(dto);
+            }
+            return dtos;
         }
     }
 }

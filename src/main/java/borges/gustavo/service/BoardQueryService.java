@@ -1,5 +1,6 @@
 package borges.gustavo.service;
 
+import borges.gustavo.dto.BoardDetailsDTO;
 import borges.gustavo.persistence.dao.BoardColumnDAO;
 import borges.gustavo.persistence.dao.BoardDAO;
 import borges.gustavo.persistence.entity.BoardEntity;
@@ -22,10 +23,20 @@ public class BoardQueryService {
             var entity = optional.get();
             entity.setBoardColumns(boardColumnDao.findByBoardId(entity.getId()));
             return Optional.of(entity);
-        } else {
-
         }
+        return Optional.empty();
+    }
 
+    public Optional<BoardDetailsDTO> showBoardDetails(final Long id) throws SQLException {
+        var boardDao = new BoardDAO(connection);
+        var boardColumnDao = new BoardColumnDAO(connection);
+        var optional = boardDao.findById(id);
+        if (optional.isPresent()) {
+            var entity = optional.get();
+            var columns = boardColumnDao.findByBoardIdWithDetails(entity.getId());
+            var dto = new BoardDetailsDTO(entity.getId(), entity.getName(), columns);
+            return Optional.of(dto);
+        }
         return Optional.empty();
     }
 }

@@ -29,11 +29,11 @@ public class MainMenu {
             System.out.println("4 - Sair");
             option = scanner.nextInt();
             switch(option){
-                case 1: createBoard();
-                case 2: selectBoard();
-                case 3: deleteBoard();
-                case 4: System.exit(0);
-                default: System.out.println("Opção inválida, tente novamente.");
+                case 1 -> createBoard();
+                case 2 -> selectBoard();
+                case 3 -> deleteBoard();
+                case 4 -> System.exit(0);
+                default -> System.out.println("Opção inválida, tente novamente.");
             }
         }
     }
@@ -68,7 +68,7 @@ public class MainMenu {
 
         System.out.println("Digite o nome da coluna de cancelamento do Board:");
         var cancelColumnName = scanner.next();
-        var cancelColumn = createColumn(cancelColumnName, CANCEL, additionalColumns+1);
+        var cancelColumn = createColumn(cancelColumnName, CANCEL, additionalColumns+2);
         columns.add(cancelColumn);
 
         entity.setBoardColumns(columns);
