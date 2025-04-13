@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static borges.gustavo.persistence.entity.BoardColumnKindEnum.findByName;
+import static java.util.Objects.isNull;
 
 @RequiredArgsConstructor
 public class BoardColumnDAO {
@@ -62,7 +63,7 @@ public class BoardColumnDAO {
                 SELECT bc.id, 
                        bc.name, 
                        bc.kind, 
-                       COUNT(SELECT c.id 
+                       (SELECT COUNT(c.id) 
                             FROM CARDS c 
                             WHERE c.board_column_id = bc.id) AS cards_amount
                 FROM BOARDS_COLUMNS bc
@@ -85,7 +86,7 @@ public class BoardColumnDAO {
         }
     }
 
-    public Optional<BoardColumnEntity> findById(Long boardId) throws SQLException {
+    public Optional<BoardColumnEntity> findById(final Long boardId) throws SQLException {
         List<BoardColumnEntity> entities = new ArrayList<>();
         var sql =
                     """
@@ -95,7 +96,7 @@ public class BoardColumnDAO {
                            c.title,
                            c.description
                     FROM BOARDS_COLUMNS bc
-                    INNER JOIN CARDS c 
+                    LEFT JOIN CARDS c 
                         ON c.board_column_id = bc.id
                     WHERE bc.id = ?
                     """;
@@ -108,12 +109,16 @@ public class BoardColumnDAO {
                 entity.setName(resultSet.getString("bc.name"));
                 entity.setKind(findByName(resultSet.getString("bc.kind")));
                 do {
+                    if (isNull(resultSet.getString("c.title"))){
+                        break;
+                    }
                     var card = new CardEntity();
                     card.setId(resultSet.getLong("c.id"));
                     card.setTitle(resultSet.getString("c.title"));
                     card.setDescription(resultSet.getString("c.description"));
                     entity.getCards().add(card);
                 } while (resultSet.next());
+                return Optional.of(entity);
             }
             return Optional.empty();
         }

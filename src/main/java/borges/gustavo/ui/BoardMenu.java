@@ -1,16 +1,20 @@
 package borges.gustavo.ui;
 
+import borges.gustavo.dto.BoardColumnInfoDTO;
 import borges.gustavo.persistence.entity.BoardColumnEntity;
 import borges.gustavo.persistence.entity.BoardEntity;
+import borges.gustavo.persistence.entity.CardEntity;
 import borges.gustavo.service.BoardColumnQueryService;
 import borges.gustavo.service.BoardQueryService;
 import borges.gustavo.service.CardQueryService;
+import borges.gustavo.service.CardService;
 import lombok.AllArgsConstructor;
 
 import java.sql.SQLException;
 import java.util.Scanner;
 
 import static borges.gustavo.persistence.config.ConnectionConfig.getConnection;
+import static borges.gustavo.persistence.entity.BoardColumnKindEnum.INITIAL;
 
 @AllArgsConstructor
 public class BoardMenu {
@@ -20,7 +24,7 @@ public class BoardMenu {
 
     public void execute() {
         try {
-            System.out.printf("Bem vindo ao Board %s, selecione a operação desejada: ", entity.getId());
+            System.out.printf("Bem vindo ao Board %s, selecione a operação desejada:\n", entity.getId());
             var option = -1;
             while (option != 9) {
                 System.out.println("1 - Criar um novo Card.");
@@ -28,10 +32,10 @@ public class BoardMenu {
                 System.out.println("3 - Bloquear um Card.");
                 System.out.println("4 - Desbloquear um Card.");
                 System.out.println("5 - Cancelar um Card.");
-                System.out.println("6 - Voltar ao menu anterior.");
-                System.out.println("7 - Visualizar Board.");
-                System.out.println("8 - Visualizar colunas com Cards.");
-                System.out.println("9 - Visualizar Cards.");
+                System.out.println("6 - Visualizar Board.");
+                System.out.println("7 - Visualizar colunas com Cards.");
+                System.out.println("8 - Visualizar Cards.");
+                System.out.println("9 - Voltar ao menu anterior.");
                 System.out.println("10 - Sair.");
                 option = scanner.nextInt();
                 switch (option) {
@@ -54,24 +58,71 @@ public class BoardMenu {
         }
     }
 
-    private void createCard() {
-
+    private void createCard() throws SQLException{
+        var card = new CardEntity();
+        System.out.println("Digite o título do novo Card: ");
+        card.setTitle(scanner.next());
+        System.out.println("Digite a descrição do novo Card: ");
+        card.setDescription(scanner.next());
+        var initialColumn = entity.getInitialColumn();
+        card.setBoardColumn(initialColumn);
+        try (var connection = getConnection()) {
+            new CardService(connection).insert(card);
+        }
     }
 
-    private void moveCardToNextColumn() {
-
+    private void moveCardToNextColumn() throws SQLException {
+        System.out.println("Digite ID do Card que deseja mover:");
+        var cardId = scanner.nextLong();
+        var boardColumnsInfo = entity.getBoardColumns().stream()
+                .map(bc ->  new BoardColumnInfoDTO(bc.getId(), bc.getOrder(), bc.getKind()))
+                .toList();
+        try (var connection = getConnection()) {
+            new CardService(connection).moveToNextColumn(cardId, boardColumnsInfo);
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
-    private void blockCard() {
-
+    private void blockCard() throws SQLException {
+        System.out.println("Digite o ID do Card que deseja bloquear:");
+        var cardId = scanner.nextLong();
+        System.out.println("Digite o motivo do bloqueio:");
+        var reason = scanner.next();
+        var boardColumnsInfo = entity.getBoardColumns().stream()
+                .map(bc ->  new BoardColumnInfoDTO(bc.getId(), bc.getOrder(), bc.getKind()))
+                .toList();
+        try (var connection = getConnection()) {
+            new CardService(connection).block(reason, cardId, boardColumnsInfo);
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
-    private void unblockCard() {
-
+    private void unblockCard() throws SQLException {
+        System.out.println("Digite o ID do Card que deseja bloquear:");
+        var cardId = scanner.nextLong();
+        System.out.println("Digite o motivo do bloqueio:");
+        var reason = scanner.next();
+        try (var connection = getConnection()) {
+            new CardService(connection).unblock(reason, cardId);
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
-    private void cancelCard() {
-
+    private void cancelCard() throws SQLException {
+        System.out.println("Digite ID do Card que deseja cancelar:");
+        var cardId = scanner.nextLong();
+        var cancelColumn = entity.getCancelColumn();
+        var boardColumnsInfo = entity.getBoardColumns().stream()
+                .map(bc ->  new BoardColumnInfoDTO(bc.getId(), bc.getOrder(), bc.getKind()))
+                .toList();
+        try (var connection = getConnection()) {
+            new CardService(connection).cancel(cardId, cancelColumn.getId(),boardColumnsInfo);
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private void showBoard() throws SQLException {
@@ -98,7 +149,7 @@ public class BoardMenu {
             var column = new BoardColumnQueryService(connection).findById(selectedColumn);
             column.ifPresent(b -> {
                 System.out.printf("Coluna %s tipo %s\n", b.getName(), b.getKind());
-                b.getCards().forEach(card -> System.out.printf("Card [%s] - %s\nDescrição: %s",
+                b.getCards().forEach(card -> System.out.printf("Card [%s] - %s\nDescrição: %s\n",
                         card.getId(), card.getTitle(), card.getDescription()));
             });
         }
@@ -113,7 +164,7 @@ public class BoardMenu {
                             c -> {
                                 System.out.printf("Card %s - [%s]\n", c.id(), c.title());
                                 System.out.printf("Descrição: %s\n", c.description());
-                                System.out.println(c.blocked() ? "Bloqueado! Motivo: %s" + c.blockReason() : "Não bloqueado.");
+                                System.out.println(c.blocked() ? "Bloqueado! Motivo: " + c.blockReason() : "Não bloqueado.");
                                 System.out.printf("Já foi bloqueado %s vezes.\n", c.blocksAmount());
                                 System.out.printf("No momento encontra-se %s - %s.\n", c.columnId(), c.columnName());
                             },
