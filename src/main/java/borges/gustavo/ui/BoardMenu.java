@@ -4,6 +4,7 @@ import borges.gustavo.persistence.entity.BoardColumnEntity;
 import borges.gustavo.persistence.entity.BoardEntity;
 import borges.gustavo.service.BoardColumnQueryService;
 import borges.gustavo.service.BoardQueryService;
+import borges.gustavo.service.CardQueryService;
 import lombok.AllArgsConstructor;
 
 import java.sql.SQLException;
@@ -99,11 +100,24 @@ public class BoardMenu {
                 System.out.printf("Coluna %s tipo %s\n", b.getName(), b.getKind());
                 b.getCards().forEach(card -> System.out.printf("Card [%s] - %s\nDescrição: %s",
                         card.getId(), card.getTitle(), card.getDescription()));
-            })
+            });
         }
     }
 
-    private void showCard() {
-
+    private void showCard() throws SQLException {
+        System.out.println("Digite o id do card que deseja visualizar: ");
+        var selectedCardId = scanner.nextLong();
+        try (var connection = getConnection()){
+            new CardQueryService(connection).findById(selectedCardId)
+                    .ifPresentOrElse(
+                            c -> {
+                                System.out.printf("Card %s - [%s]\n", c.id(), c.title());
+                                System.out.printf("Descrição: %s\n", c.description());
+                                System.out.println(c.blocked() ? "Bloqueado! Motivo: %s" + c.blockReason() : "Não bloqueado.");
+                                System.out.printf("Já foi bloqueado %s vezes.\n", c.blocksAmount());
+                                System.out.printf("No momento encontra-se %s - %s.\n", c.columnId(), c.columnName());
+                            },
+                            () -> System.out.printf("Card %s não encontrado!\n", selectedCardId));
+        }
     }
 }
